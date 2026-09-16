@@ -96,9 +96,16 @@ plain, since the same seven letters also turn up in label text there.
 
 Clearing lines scores the classic single/double/triple/tetris values —
 40/100/300/800 — scaled by `level` (see `scoreForLines`), and locking a
-piece that doesn't complete a line scores nothing. The stack topping out
-ends the game: the screen switches to "game over" with the final score,
-and any key starts a fresh game.
+piece that doesn't complete a line scores nothing. Every clear counts
+toward `level` too: it goes up by one for every `LINES_PER_LEVEL` (10)
+lines cleared in total (see `levelForLines`) — a level-up is scored at
+the level it happened at, not the one it just reached. Each level drops
+pieces 20% faster than the last (`dropIntervalMs`, down to a floor of
+80ms/row) — a deliberately steep curve so leveling up is actually felt,
+rather than the classic NES/Game Boy table's much subtler early levels.
+The stack topping out ends the game: the screen switches to "game over"
+with the final score, and any key starts
+a fresh game.
 
 The `NEXT` piece shown in the sidebar is a real one-piece lookahead: it's
 drawn before it's ever shown, and it's exactly what spawns once the

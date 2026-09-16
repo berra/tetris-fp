@@ -30,7 +30,7 @@ if (screen === null) {
 }
 
 let frame: GameFrame = initialFrame
-let gravityIntervalId: number | undefined
+let gravityTimeoutId: number | undefined
 
 // Keeps `screen.highScore` in sync with the persisted high score before
 // every paint, so it's always showing the true max — this run's score
@@ -49,16 +49,25 @@ const paint = (): void => {
 }
 
 const stopGravity = (): void => {
-  if (gravityIntervalId !== undefined) window.clearInterval(gravityIntervalId)
-  gravityIntervalId = undefined
+  if (gravityTimeoutId !== undefined) window.clearTimeout(gravityTimeoutId)
+  gravityTimeoutId = undefined
 }
 
+// A self-rescheduling timeout rather than a plain `setInterval`: the
+// level (and so the drop speed) can change on any tick, and re-reading
+// `frame.screen.level` right before scheduling the next one is what
+// makes the game actually speed up as the level rises, instead of
+// ticking forever at whatever speed it started at.
 const scheduleGravity = (): void => {
   stopGravity()
-  gravityIntervalId = window.setInterval(() => {
+  gravityTimeoutId = window.setTimeout(() => {
     frame = tickFrame(randomTetrominoId())(frame)
     paint()
-    if (frame.mode === 'gameOver') stopGravity()
+    if (frame.mode === 'gameOver') {
+      stopGravity()
+    } else {
+      scheduleGravity()
+    }
   }, dropIntervalMs(frame.screen.level))
 }
 
@@ -100,7 +109,14 @@ window.addEventListener('keydown', (event) => {
       frame = tickFrame(randomTetrominoId())(
         setScreen(hardDrop(frame.screen))(frame)
       )
-      if (frame.mode === 'gameOver') stopGravity()
+      // A hard drop can level the game up too — reschedule so the next
+      // natural tick uses the (possibly now faster) current speed,
+      // rather than the stale delay from before this drop.
+      if (frame.mode === 'gameOver') {
+        stopGravity()
+      } else {
+        scheduleGravity()
+      }
       break
     default:
       return

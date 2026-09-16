@@ -5,6 +5,7 @@ import { Board, TetrominoId } from './Board'
 import { collides } from './Collision'
 import { GameFrame } from './GameFrame'
 import { GameScreen } from './GameScreen'
+import { levelForLines } from './Level'
 import { clearRows, findFullRows, scoreForLines } from './Lines'
 import { assoc } from './internal'
 import {
@@ -25,6 +26,7 @@ const setBoard = assoc<GameScreen>()('board')
 const setActive = assoc<GameScreen>()('active')
 const setScore = assoc<GameScreen>()('score')
 const setLines = assoc<GameScreen>()('lines')
+const setLevel = assoc<GameScreen>()('level')
 const setNext = assoc<GameScreen>()('next')
 
 const lockPiece =
@@ -34,20 +36,24 @@ const lockPiece =
       row.map((cell, x) => (isPieceCell(piece)(x, y) ? piece.id : cell))
     )
 
-// Lock `piece` into `screen.board`, clear any lines it completed, and
-// award the score for them — the one place a piece stops being active.
+// Lock `piece` into `screen.board`, clear any lines it completed, award
+// the score for them (at the level they were cleared at), and level up
+// if that crossed a LINES_PER_LEVEL threshold — the one place a piece
+// stops being active.
 const settle =
   (screen: GameScreen) =>
   (piece: Piece): GameScreen => {
     const locked = lockPiece(screen.board)(piece)
     const fullRows = findFullRows(locked)
+    const lines = screen.lines + fullRows.length
 
     return pipe(
       screen,
       setBoard(clearRows(locked)(fullRows)),
       setActive(null),
       setScore(screen.score + scoreForLines(screen.level)(fullRows.length)),
-      setLines(screen.lines + fullRows.length)
+      setLines(lines),
+      setLevel(levelForLines(lines))
     )
   }
 

@@ -1,6 +1,8 @@
 import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
+  INITIAL_LEVEL,
+  LINES_PER_LEVEL,
   emptyBoard,
   hardDrop,
   initialScreen,
@@ -149,6 +151,35 @@ describe('step', () => {
     expect(stepped.score).toBe(100) // double, at level 1
     expect(stepped.lines).toBe(2)
     expect(stepped.board).toEqual(emptyBoard)
+  })
+
+  it('levels up once the running total crosses a LINES_PER_LEVEL threshold', () => {
+    const almostFullRow = emptyBoard[0]?.map((_, x) =>
+      x === 4 || x === 5 ? null : 'I'
+    )
+    const board = emptyBoard.map((row, y) =>
+      y === BOARD_HEIGHT - 1 ? almostFullRow ?? row : row
+    )
+    const piece = {
+      id: 'O' as const,
+      cells: [
+        [4, BOARD_HEIGHT - 2],
+        [5, BOARD_HEIGHT - 2],
+        [4, BOARD_HEIGHT - 1],
+        [5, BOARD_HEIGHT - 1],
+      ] as const,
+    }
+    const screen = {
+      ...initialScreen,
+      board,
+      active: piece,
+      lines: LINES_PER_LEVEL - 1,
+    }
+    const stepped = step(screen)
+    expect(stepped.lines).toBe(LINES_PER_LEVEL)
+    expect(stepped.level).toBe(INITIAL_LEVEL + 1)
+    // scored at the level this clear happened at, not the level it leveled up to
+    expect(stepped.score).toBe(40 * INITIAL_LEVEL)
   })
 })
 
