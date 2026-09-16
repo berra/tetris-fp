@@ -1,0 +1,6 @@
+services:
+  - type: web
+    runtime: static
+    name: tetris-fp
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist

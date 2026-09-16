@@ -1,0 +1,113 @@
+// The bundled client for the playable page (see `toGameHtmlDocument` in
+// ../Html.ts). Not part of the published library — this is the one place
+// the game's pure functions get wired up to the DOM and a keyboard.
+
+import { toColoredGridHtml, toGridHtml } from '../Html'
+import { GameFrame, initialFrame, playingFrame } from '../GameFrame'
+import { GameScreen } from '../GameScreen'
+import { renderFrame } from '../Renderer'
+import { dropIntervalMs } from '../Level'
+import { randomTetrominoId } from '../Tetromino'
+import { assoc } from '../internal'
+import { updateHighScore } from './highScore'
+import {
+  hardDrop,
+  moveLeft,
+  moveRight,
+  rotateClockwise,
+  rotateCounterClockwise,
+  tickFrame,
+} from '../Gravity'
+
+const setScreen = assoc<GameFrame>()('screen')
+const setNext = assoc<GameScreen>()('next')
+const setHighScore = assoc<GameScreen>()('highScore')
+
+const screen = document.getElementById('screen')
+
+if (screen === null) {
+  throw new Error('missing #screen element')
+}
+
+let frame: GameFrame = initialFrame
+let gravityIntervalId: number | undefined
+
+// Keeps `screen.highScore` in sync with the persisted high score before
+// every paint, so it's always showing the true max — this run's score
+// included, the moment it beats the previous record.
+const syncHighScore = (): void => {
+  const highScore = updateHighScore(frame.screen.score)
+  frame = setScreen(setHighScore(highScore)(frame.screen))(frame)
+}
+
+const paint = (): void => {
+  syncHighScore()
+  // Only the playing screen's playfield is safe to color by piece letter
+  // — the title and game-over screens' text can contain the same letters.
+  const toHtml = frame.mode === 'playing' ? toColoredGridHtml : toGridHtml
+  screen.innerHTML = toHtml(renderFrame(frame))
+}
+
+const stopGravity = (): void => {
+  if (gravityIntervalId !== undefined) window.clearInterval(gravityIntervalId)
+  gravityIntervalId = undefined
+}
+
+const scheduleGravity = (): void => {
+  stopGravity()
+  gravityIntervalId = window.setInterval(() => {
+    frame = tickFrame(randomTetrominoId())(frame)
+    paint()
+    if (frame.mode === 'gameOver') stopGravity()
+  }, dropIntervalMs(frame.screen.level))
+}
+
+const startGame = (): void => {
+  // Seed the queue with the piece that's about to spawn, so the very
+  // first `tick` below already has a real "next piece" to queue behind
+  // it instead of a one-frame placeholder.
+  const seededScreen = setNext(randomTetrominoId())(playingFrame.screen)
+  const seeded = setScreen(seededScreen)(playingFrame)
+  frame = tickFrame(randomTetrominoId())(seeded)
+  paint()
+  scheduleGravity()
+}
+
+window.addEventListener('keydown', (event) => {
+  if (frame.mode === 'start' || frame.mode === 'gameOver') {
+    startGame()
+    return
+  }
+
+  switch (event.key) {
+    case 'ArrowLeft':
+      frame = setScreen(moveLeft(frame.screen))(frame)
+      break
+    case 'ArrowRight':
+      frame = setScreen(moveRight(frame.screen))(frame)
+      break
+    case 'ArrowUp':
+      frame = setScreen(rotateClockwise(frame.screen))(frame)
+      break
+    case 'z':
+    case 'Z':
+      frame = setScreen(rotateCounterClockwise(frame.screen))(frame)
+      break
+    case 'ArrowDown':
+    case ' ':
+      // Lock the dropped piece and spawn its replacement immediately,
+      // rather than leaving the board piece-less until the next tick.
+      frame = tickFrame(randomTetrominoId())(
+        setScreen(hardDrop(frame.screen))(frame)
+      )
+      if (frame.mode === 'gameOver') stopGravity()
+      break
+    default:
+      return
+  }
+
+  event.preventDefault()
+  paint()
+})
+
+paint()
