@@ -3,7 +3,12 @@
 // the game's pure functions get wired up to the DOM and a keyboard.
 
 import { toColoredGridHtml, toGridHtml } from '../Html'
-import { GameFrame, initialFrame, playingFrame } from '../GameFrame'
+import {
+  GameFrame,
+  initialFrame,
+  playingFrame,
+  togglePause,
+} from '../GameFrame'
 import { GameScreen } from '../GameScreen'
 import { renderFrame } from '../Renderer'
 import { dropIntervalMs } from '../Level'
@@ -24,9 +29,14 @@ const setNext = assoc<GameScreen>()('next')
 const setHighScore = assoc<GameScreen>()('highScore')
 
 const screen = document.getElementById('screen')
+const pauseOverlay = document.getElementById('pause-overlay')
 
 if (screen === null) {
   throw new Error('missing #screen element')
+}
+
+if (pauseOverlay === null) {
+  throw new Error('missing #pause-overlay element')
 }
 
 let frame: GameFrame = initialFrame
@@ -42,10 +52,15 @@ const syncHighScore = (): void => {
 
 const paint = (): void => {
   syncHighScore()
-  // Only the playing screen's playfield is safe to color by piece letter
-  // — the title and game-over screens' text can contain the same letters.
-  const toHtml = frame.mode === 'playing' ? toColoredGridHtml : toGridHtml
+  // Only the playing (or paused — same screen, just frozen) playfield is
+  // safe to color by piece letter — the title and game-over screens'
+  // text can contain the same letters.
+  const toHtml =
+    frame.mode === 'playing' || frame.mode === 'paused'
+      ? toColoredGridHtml
+      : toGridHtml
   screen.innerHTML = toHtml(renderFrame(frame))
+  pauseOverlay.style.display = frame.mode === 'paused' ? 'flex' : 'none'
 }
 
 const stopGravity = (): void => {
@@ -88,7 +103,20 @@ window.addEventListener('keydown', (event) => {
     return
   }
 
+  // Frozen while paused — the only way out is unpausing.
+  if (frame.mode === 'paused' && event.key !== 'Escape') {
+    return
+  }
+
   switch (event.key) {
+    case 'Escape':
+      frame = togglePause(frame)
+      if (frame.mode === 'paused') {
+        stopGravity()
+      } else {
+        scheduleGravity()
+      }
+      break
     case 'ArrowLeft':
       frame = setScreen(moveLeft(frame.screen))(frame)
       break

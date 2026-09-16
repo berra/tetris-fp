@@ -203,4 +203,9 @@ describe('renderFrame', () => {
       renderGameOverScreen(99)
     )
   })
+
+  it('renders the same game screen, unchanged, while mode is "paused"', () => {
+    const pausedFrame = { mode: 'paused' as const, screen: playingFrame.screen }
+    expect(renderFrame(pausedFrame)).toBe(renderScreen(playingFrame.screen))
+  })
 })

@@ -74,6 +74,12 @@ that wires the library's pure game functions up to the keyboard:
 | `↑`                  | Rotate clockwise         |
 | `Z`                  | Rotate counter-clockwise |
 | `↓` / `Space`        | Hard drop                |
+| `Esc`                | Pause / resume            |
+
+Pausing (`togglePause`) freezes the game screen exactly as it was — the
+gravity loop stops — and darkens it under a centered "PAUSED" overlay
+(`.pause-overlay` in [`Html.ts`](src/Html.ts)); every other key is
+ignored until `Esc` resumes it.
 
 Running `npm run build` followed by `npm start` serves `dist/` (including
 `tetris.html` and `game.js`) at `http://localhost:7878`.

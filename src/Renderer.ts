@@ -231,8 +231,10 @@ export const renderGameOverScreen = (score: number): string =>
 
 /**
  * Render a whole frame: the title screen while `mode` is `'start'`, the
- * game screen while it's `'playing'`, or the game-over screen once it's
- * `'gameOver'`.
+ * game-over screen once it's `'gameOver'`, or the game screen itself
+ * while `'playing'` — and, unchanged, while `'paused'` too, since pausing
+ * only freezes it; a pause overlay is a presentation concern, not an
+ * ASCII one (see `toHtmlDocument`'s `.pause-overlay`).
  *
  * @since 1.0.0
  * @category Destructors

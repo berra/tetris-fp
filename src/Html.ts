@@ -159,8 +159,15 @@ export const toGridHtml = (screenText: string): string =>
 export const toColoredGridHtml = (screenText: string): string =>
   join('')(screenText.split('\n').map(renderColoredLine))
 
+// Hidden by default (see .pause-overlay's CSS); the live client toggles
+// it directly by id when `frame.mode` is `'paused'`. Always included, even
+// in the static single-screen/title-screen documents, since it's inert
+// unless something switches it on.
+const pauseOverlayHtml =
+  '<div class="pause-overlay" id="pause-overlay">PAUSED</div>'
+
 const frameHtml = (screenHtml: string): string =>
-  `<div class="frame"><div class="screen" id="screen">${screenHtml}</div></div>`
+  `<div class="frame"><div class="screen" id="screen">${screenHtml}</div>${pauseOverlayHtml}</div>`
 
 const pageShell =
   (title: string) =>
@@ -180,6 +187,7 @@ const pageShell =
     justify-content: center;
   }
   .frame {
+    position: relative;
     padding: ${2 * PIXEL_SCALE}px;
     background: #2b2b1f;
     border-radius: ${3 * PIXEL_SCALE}px;
@@ -201,6 +209,22 @@ const pageShell =
     font-weight: bold;
     font-size: ${TILE_SIZE_PX * 0.75}px;
     color: ${SCREEN_TEXT};
+  }
+  .pause-overlay {
+    display: none;
+    position: absolute;
+    top: ${2 * PIXEL_SCALE}px;
+    left: ${2 * PIXEL_SCALE}px;
+    width: ${SCREEN_WIDTH_PX}px;
+    height: ${SCREEN_HEIGHT_PX}px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: ${TILE_SIZE_PX * 1.25}px;
+    letter-spacing: ${PIXEL_SCALE}px;
   }
   ${pieceColorRules()}
 </style>
