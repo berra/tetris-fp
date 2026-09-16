@@ -13,6 +13,7 @@ import {
   playingFrame,
   renderFrame,
   renderGameOverScreen,
+  renderMobileFrame,
   renderScreen,
   renderStartScreen,
   SCREEN_COLUMNS,
@@ -207,5 +208,48 @@ describe('renderFrame', () => {
   it('renders the same game screen, unchanged, while mode is "paused"', () => {
     const pausedFrame = { mode: 'paused' as const, screen: playingFrame.screen }
     expect(renderFrame(pausedFrame)).toBe(renderScreen(playingFrame.screen))
+  })
+})
+
+describe('renderMobileFrame', () => {
+  it('always renders exactly SCREEN_ROWS lines of BOARD_WIDTH characters', () => {
+    ;[
+      initialFrame,
+      playingFrame,
+      { mode: 'paused' as const, screen: initialScreen },
+      { mode: 'gameOver' as const, screen: initialScreen },
+    ].forEach((frame) => {
+      const lines = renderMobileFrame(frame).split('\n')
+      expect(lines.length).toBe(SCREEN_ROWS)
+      lines.forEach((line) => expect(line.length).toBe(BOARD_WIDTH))
+    })
+  })
+
+  it('re-centers the title message for BOARD_WIDTH, rather than clipping renderStartScreen', () => {
+    const naiveSlice = renderStartScreen()
+      .split('\n')
+      .map((line) => line.slice(0, BOARD_WIDTH))
+      .join('\n')
+    const mobileText = renderMobileFrame(initialFrame)
+    // clipping "TETRIS" out of the middle of a wider centering would
+    // have garbled it (e.g. down to just "TET") — this must not match.
+    expect(mobileText).not.toBe(naiveSlice)
+    expect(mobileText).toContain('TETRIS')
+  })
+
+  it('re-centers the game-over message for BOARD_WIDTH too', () => {
+    const gameOverFrame = {
+      mode: 'gameOver' as const,
+      screen: { ...initialScreen, score: 42 },
+    }
+    expect(renderMobileFrame(gameOverFrame)).toContain('GAME OVER')
+  })
+
+  it('matches the playfield columns of renderScreen while playing', () => {
+    const lines = renderMobileFrame(playingFrame).split('\n')
+    const fullLines = renderScreen(playingFrame.screen).split('\n')
+    lines.forEach((line, y) => {
+      expect(line).toBe(fullLines[y]?.slice(0, BOARD_WIDTH))
+    })
   })
 })

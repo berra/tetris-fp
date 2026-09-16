@@ -11,7 +11,9 @@ import {
   PREVIEW_WIDTH,
   SCREEN_COLUMNS,
   SCREEN_ROWS,
+  START_SCREEN_LINES,
   renderFrame,
+  renderMobileFrame,
 } from './Renderer'
 import { TETROMINO_IDS } from './Tetromino'
 
@@ -134,6 +136,19 @@ const renderColoredLine = (line: string, row: number): string =>
   join('')(line.split('').map(renderColoredCellDiv(row)))
 
 /**
+ * Cut rendered screen text (see `renderScreen`, `renderFrame`) down to
+ * just its playfield columns, dropping the sidebar entirely. The
+ * small-screen layout shows the playfield full width, with the sidebar
+ * replaced by a condensed overlay instead (see `main.ts`'s
+ * `#mobile-stats`) — this is the text that overlay's board half needs.
+ *
+ * @since 1.0.0
+ * @category Destructors
+ */
+export const boardOnlyText = (screenText: string): string =>
+  join('\n')(screenText.split('\n').map((line) => line.slice(0, BOARD_WIDTH)))
+
+/**
  * Turn rendered screen text (see `renderScreen`, `renderFrame`) into the
  * `.cell`-per-character markup `.screen`'s CSS grid expects, with no
  * coloring — safe for any text, including the title and game-over
@@ -166,8 +181,58 @@ export const toColoredGridHtml = (screenText: string): string =>
 const pauseOverlayHtml =
   '<div class="pause-overlay" id="pause-overlay">PAUSED</div>'
 
-const frameHtml = (screenHtml: string): string =>
-  `<div class="frame"><div class="screen" id="screen">${screenHtml}</div>${pauseOverlayHtml}</div>`
+// A title/game-over message reads as prose, not bricks — laying it out
+// on the same one-character-per-grid-cell `.mobile-board` (built for
+// showing bordered blocks) looks stilted. `.mobile-message` shows it as
+// plain, normally-wrapped, CSS-centered text instead; exactly one of the
+// two is ever `.active` (see the `@media` block in `pageShell`).
+const activeClass = (isActive: boolean): string => (isActive ? ' active' : '')
+
+// The condensed score/level/high-score readout the small-screen layout
+// overlays on the board — text only, no coloring needed. Starts empty;
+// the live client (`main.ts`) fills it in from `GameScreen`'s numbers
+// directly, since by the time we're just looking at rendered text here
+// there's no clean way back to those numbers. Only relevant alongside
+// the board itself — like `.mobile-board`, hidden during a title/
+// game-over message, where it'd otherwise float redundantly over prose.
+const mobileStatsHtml = (isActive: boolean): string =>
+  `<div class="mobile-stats${activeClass(isActive)}" id="mobile-stats"></div>`
+
+const escapeMessageLine = (line: string): string =>
+  join('')(line.split('').map(escapeHtml))
+
+const mobileMessageHtml =
+  (isActive: boolean) =>
+  (lines: ReadonlyArray<string>): string =>
+    `<div class="mobile-message${activeClass(
+      isActive
+    )}" id="mobile-message">${join('\n')(lines.map(escapeMessageLine))}</div>`
+
+// Lays out the desktop layout's `#screen` (the full playfield-plus-
+// sidebar grid) alongside the small-screen layout's alternatives: the
+// playfield-only `#mobile-board` (shown full width, sidebar dropped for
+// `#mobile-stats` instead) for real gameplay, or the plain-text
+// `#mobile-message` for a title/game-over message — `messageLines` is
+// `null` exactly when there's gameplay to show instead of a message.
+const frameHtml =
+  (toHtml: (text: string) => string) =>
+  (screenText: string) =>
+  (mobileBoardText: string) =>
+  (messageLines: ReadonlyArray<string> | null): string =>
+    `<div class="frame">
+      <div class="screen" id="screen">${toHtml(screenText)}</div>
+      <div class="mobile-board${activeClass(
+        messageLines === null
+      )}" id="mobile-board">${toHtml(mobileBoardText)}</div>
+      ${mobileMessageHtml(messageLines !== null)(messageLines ?? [])}
+      ${mobileStatsHtml(messageLines === null)}
+      ${pauseOverlayHtml}
+    </div>`
+
+// Below this viewport width, the desktop's board-plus-sidebar grid no
+// longer fits comfortably — switch to the full-width, playfield-only
+// small-screen layout instead (see the `@media` block below).
+const MOBILE_BREAKPOINT_PX = SCREEN_WIDTH_PX
 
 const pageShell =
   (title: string) =>
@@ -176,6 +241,7 @@ const pageShell =
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title}</title>
 <style>
   html, body {
@@ -199,6 +265,51 @@ const pageShell =
     grid-template-columns: repeat(${SCREEN_COLUMNS}, ${TILE_SIZE_PX}px);
     grid-template-rows: repeat(${SCREEN_ROWS}, ${TILE_SIZE_PX}px);
     background: ${SCREEN_BACKGROUND};
+  }
+  .mobile-board {
+    display: none;
+    position: relative;
+    width: 100%;
+    aspect-ratio: ${BOARD_WIDTH} / ${SCREEN_ROWS};
+    grid-template-columns: repeat(${BOARD_WIDTH}, 1fr);
+    grid-template-rows: repeat(${SCREEN_ROWS}, 1fr);
+    background: ${SCREEN_BACKGROUND};
+  }
+  .mobile-board .cell {
+    font-size: 11px;
+  }
+  .mobile-message {
+    display: none;
+    width: 100%;
+    aspect-ratio: ${BOARD_WIDTH} / ${SCREEN_ROWS};
+    box-sizing: border-box;
+    padding: 24px 16px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: ${SCREEN_BACKGROUND};
+    color: ${SCREEN_TEXT};
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 20px;
+    line-height: 1.6;
+    text-align: center;
+    white-space: pre-line;
+  }
+  .mobile-stats {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 2px 4px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 11px;
+    color: ${SCREEN_TEXT};
+    background: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    overflow: hidden;
   }
   .cell {
     display: flex;
@@ -226,7 +337,73 @@ const pageShell =
     font-size: ${TILE_SIZE_PX * 1.25}px;
     letter-spacing: ${PIXEL_SCALE}px;
   }
+  .controls {
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas: ". up ." "left down right";
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+    margin: 16px auto 0;
+    padding: 0 16px;
+    box-sizing: border-box;
+  }
+  .control-up { grid-area: up; }
+  .control-left { grid-area: left; }
+  .control-down { grid-area: down; }
+  .control-right { grid-area: right; }
+  .control-btn {
+    aspect-ratio: 1;
+    border: none;
+    border-radius: 12px;
+    background: #2b2b1f;
+    color: #ffffff;
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .control-btn:active {
+    background: #45453a;
+  }
   ${pieceColorRules()}
+  @media (max-width: ${MOBILE_BREAKPOINT_PX}px) {
+    html, body {
+      height: auto;
+      min-height: 100%;
+      flex-direction: column;
+    }
+    .frame {
+      width: 100%;
+      padding: 0;
+      border-radius: 0;
+    }
+    .screen {
+      display: none;
+    }
+    .mobile-board.active {
+      display: grid;
+    }
+    .mobile-message.active {
+      display: flex;
+    }
+    .mobile-stats.active {
+      display: block;
+    }
+    .pause-overlay {
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      font-size: 24px;
+    }
+    .controls {
+      display: grid;
+    }
+  }
 </style>
 </head>
 <body>
@@ -234,6 +411,20 @@ ${bodyHtml}
 </body>
 </html>
 `
+
+// The small-screen control pad: a classic inverted-T arrow cluster below
+// the board. Each button just fires the same key its label matches —
+// `main.ts`'s one keydown handler (keyboard or synthetic) does the rest,
+// so there's no separate control-handling logic to keep in sync.
+const controlButton = (arrow: string, key: string, area: string): string =>
+  `<button type="button" class="control-btn control-${area}" data-key="${key}" aria-label="${key}">${arrow}</button>`
+
+const controlsHtml = `<div class="controls" id="controls">
+  ${controlButton('▲', 'ArrowUp', 'up')}
+  ${controlButton('◀', 'ArrowLeft', 'left')}
+  ${controlButton('▼', 'ArrowDown', 'down')}
+  ${controlButton('▶', 'ArrowRight', 'right')}
+</div>`
 
 const gameScript = '<script src="game.js"></script>'
 
@@ -255,7 +446,10 @@ const gameScript = '<script src="game.js"></script>'
  * @category Destructors
  */
 export const toHtmlDocument = (screenText: string, title = 'Tetris'): string =>
-  pipe(screenText, toColoredGridHtml, frameHtml, pageShell(title))
+  pipe(
+    frameHtml(toColoredGridHtml)(screenText)(boardOnlyText(screenText))(null),
+    pageShell(title)
+  )
 
 /**
  * The playable page: server-renders the title screen for a flicker-free
@@ -269,6 +463,10 @@ export const toHtmlDocument = (screenText: string, title = 'Tetris'): string =>
  */
 export const toGameHtmlDocument = (title = 'Tetris'): string =>
   pipe(
-    frameHtml(toGridHtml(renderFrame(initialFrame))) + gameScript,
+    frameHtml(toGridHtml)(renderFrame(initialFrame))(
+      renderMobileFrame(initialFrame)
+    )(START_SCREEN_LINES) +
+      controlsHtml +
+      gameScript,
     pageShell(title)
   )

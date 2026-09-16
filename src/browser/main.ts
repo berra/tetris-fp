@@ -10,7 +10,12 @@ import {
   togglePause,
 } from '../GameFrame'
 import { GameScreen } from '../GameScreen'
-import { renderFrame } from '../Renderer'
+import {
+  gameOverLines,
+  renderFrame,
+  renderMobileFrame,
+  START_SCREEN_LINES,
+} from '../Renderer'
 import { dropIntervalMs } from '../Level'
 import { randomTetrominoId } from '../Tetromino'
 import { assoc } from '../internal'
@@ -29,14 +34,34 @@ const setNext = assoc<GameScreen>()('next')
 const setHighScore = assoc<GameScreen>()('highScore')
 
 const screen = document.getElementById('screen')
+const mobileBoard = document.getElementById('mobile-board')
+const mobileMessage = document.getElementById('mobile-message')
+const mobileStats = document.getElementById('mobile-stats')
 const pauseOverlay = document.getElementById('pause-overlay')
+const controls = document.getElementById('controls')
 
 if (screen === null) {
   throw new Error('missing #screen element')
 }
 
+if (mobileBoard === null) {
+  throw new Error('missing #mobile-board element')
+}
+
+if (mobileMessage === null) {
+  throw new Error('missing #mobile-message element')
+}
+
+if (mobileStats === null) {
+  throw new Error('missing #mobile-stats element')
+}
+
 if (pauseOverlay === null) {
   throw new Error('missing #pause-overlay element')
+}
+
+if (controls === null) {
+  throw new Error('missing #controls element')
 }
 
 let frame: GameFrame = initialFrame
@@ -60,6 +85,25 @@ const paint = (): void => {
       ? toColoredGridHtml
       : toGridHtml
   screen.innerHTML = toHtml(renderFrame(frame))
+
+  // On the small-screen layout, a title/game-over message is prose, not
+  // bricks — show it as plain centered text (`#mobile-message`) instead
+  // of the board's one-character-per-grid-cell treatment, and hide the
+  // board (and its score overlay) while it's up.
+  const isMessage = frame.mode === 'start' || frame.mode === 'gameOver'
+  mobileBoard.classList.toggle('active', !isMessage)
+  mobileStats.classList.toggle('active', !isMessage)
+  mobileMessage.classList.toggle('active', isMessage)
+  if (isMessage) {
+    mobileMessage.textContent = (
+      frame.mode === 'start'
+        ? START_SCREEN_LINES
+        : gameOverLines(frame.screen.score)
+    ).join('\n')
+  } else {
+    mobileBoard.innerHTML = toHtml(renderMobileFrame(frame))
+    mobileStats.textContent = `SCORE ${frame.screen.score}  LEVEL ${frame.screen.level}  HIGH ${frame.screen.highScore}`
+  }
   pauseOverlay.style.display = frame.mode === 'paused' ? 'flex' : 'none'
 }
 
@@ -152,6 +196,21 @@ window.addEventListener('keydown', (event) => {
 
   event.preventDefault()
   paint()
+})
+
+// The small-screen control buttons (see `.controls` in ../Html.ts) each
+// just carry the key they stand for — firing that as a real keydown
+// means the listener above handles a tap exactly like it would a
+// keypress, with no separate button-handling logic to keep in sync.
+controls.addEventListener('click', (event) => {
+  const button =
+    event.target instanceof HTMLElement
+      ? event.target.closest('.control-btn')
+      : null
+  const key = button instanceof HTMLElement ? button.dataset.key : undefined
+  if (key !== undefined) {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key }))
+  }
 })
 
 paint()

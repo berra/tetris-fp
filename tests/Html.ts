@@ -3,8 +3,11 @@ import {
   PIXEL_SCALE,
   PREVIEW_HEIGHT,
   PREVIEW_ROW_OFFSET,
+  SCREEN_ROWS,
   TETROMINO_IDS,
+  boardOnlyText,
   toColoredGridHtml,
+  toGameHtmlDocument,
   toGridHtml,
   toHtmlDocument,
 } from '../src'
@@ -76,6 +79,18 @@ describe('toColoredGridHtml', () => {
   })
 })
 
+describe('boardOnlyText', () => {
+  it('keeps only the first BOARD_WIDTH characters of every line', () => {
+    const line = 'T'.repeat(BOARD_WIDTH) + 'SCORE0123'
+    expect(boardOnlyText(line)).toBe('T'.repeat(BOARD_WIDTH))
+  })
+
+  it('preserves the number of lines', () => {
+    const lines = Array.from({ length: SCREEN_ROWS }, (_, y) => `row${y}`)
+    expect(boardOnlyText(lines.join('\n')).split('\n').length).toBe(SCREEN_ROWS)
+  })
+})
+
 describe('toHtmlDocument', () => {
   const ruleFor = (html: string, id: string): string | undefined =>
     html.match(new RegExp(`\\.piece-${id} \\{[^}]*\\}`))?.[0]
@@ -120,5 +135,44 @@ describe('toHtmlDocument', () => {
       expect(background).toBeDefined()
       expect(background).not.toBe(color)
     })
+  })
+
+  it('includes the small-screen board and stats overlay alongside the desktop screen', () => {
+    const html = toHtmlDocument('T')
+    expect(html).toContain('id="mobile-board"')
+    expect(html).toContain('id="mobile-stats"')
+    // the mobile board is the playfield-only slice, same coloring rules
+    expect(html).toContain('piece-T')
+  })
+
+  it('shows the board (not the plain-text message) for real screen content', () => {
+    const html = toHtmlDocument('T')
+    expect(html).toMatch(/class="mobile-board active"/)
+    expect(html).toMatch(/class="mobile-stats active"/)
+    expect(html).not.toMatch(/class="mobile-message active"/)
+  })
+})
+
+describe('toGameHtmlDocument', () => {
+  it('includes the small-screen control buttons, one per arrow key', () => {
+    const html = toGameHtmlDocument()
+    ;['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].forEach((key) => {
+      expect(html).toContain(`data-key="${key}"`)
+    })
+  })
+
+  it('includes the small-screen board and stats overlay too', () => {
+    const html = toGameHtmlDocument()
+    expect(html).toContain('id="mobile-board"')
+    expect(html).toContain('id="mobile-stats"')
+  })
+
+  it('server-renders the title screen as plain centered text, not a character grid, on the small-screen layout', () => {
+    const html = toGameHtmlDocument()
+    expect(html).toMatch(/class="mobile-message active"/)
+    expect(html).not.toMatch(/class="mobile-board active"/)
+    expect(html).not.toMatch(/class="mobile-stats active"/)
+    expect(html).toContain('id="mobile-message"')
+    expect(html).toMatch(/id="mobile-message"[^<]*TETRIS/)
   })
 })

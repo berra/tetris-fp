@@ -138,18 +138,44 @@ const renderSidebar = (screen: GameScreen): ReadonlyArray<string> =>
     fitToSidebarHeight
   )
 
-const centerOnScreen = centerText(SCREEN_COLUMNS)
+// Centers a message for a `width`-wide screen — used at `SCREEN_COLUMNS`
+// for the normal title/game-over screens, and at `BOARD_WIDTH` for their
+// small-screen equivalents (see `renderMobileFrame`), which are laid out
+// on the playfield alone, with the sidebar dropped.
+const centerLinesFor =
+  (width: number) =>
+  (lines: ReadonlyArray<string>): string =>
+    pipe(
+      lines,
+      RA.map(centerText(width)),
+      centerPad<string>(SCREEN_ROWS)(centerText(width)('')),
+      join('\n')
+    )
 
-const fitToScreenHeight = centerPad<string>(SCREEN_ROWS)(centerOnScreen(''))
-
-const START_SCREEN_LINES: ReadonlyArray<string> = [
+/**
+ * The title screen's message, line by line, before any of `renderFrame`'s
+ * ASCII-grid centering/padding — for a presentation that isn't laying it
+ * out on a character grid at all (e.g. the small-screen layout's plain,
+ * CSS-centered `.mobile-message`), these are what to show directly.
+ *
+ * @since 1.0.0
+ * @category Constants
+ */
+export const START_SCREEN_LINES: ReadonlyArray<string> = [
   'TETRIS',
   '',
   'PRESS ANY KEY',
   'TO START',
 ]
 
-const gameOverLines = (score: number): ReadonlyArray<string> => [
+/**
+ * The game-over message, line by line, before any ASCII-grid centering —
+ * see `START_SCREEN_LINES`.
+ *
+ * @since 1.0.0
+ * @category Constants
+ */
+export const gameOverLines = (score: number): ReadonlyArray<string> => [
   'GAME OVER',
   '',
   `SCORE: ${score}`,
@@ -206,12 +232,7 @@ export const renderScreen = (screen: GameScreen): string =>
  * @category Destructors
  */
 export const renderStartScreen = (): string =>
-  pipe(
-    START_SCREEN_LINES,
-    RA.map(centerOnScreen),
-    fitToScreenHeight,
-    join('\n')
-  )
+  centerLinesFor(SCREEN_COLUMNS)(START_SCREEN_LINES)
 
 /**
  * Render the game-over screen: "game over", the final score, and a
@@ -222,12 +243,7 @@ export const renderStartScreen = (): string =>
  * @category Destructors
  */
 export const renderGameOverScreen = (score: number): string =>
-  pipe(
-    gameOverLines(score),
-    RA.map(centerOnScreen),
-    fitToScreenHeight,
-    join('\n')
-  )
+  centerLinesFor(SCREEN_COLUMNS)(gameOverLines(score))
 
 /**
  * Render a whole frame: the title screen while `mode` is `'start'`, the
@@ -245,3 +261,26 @@ export const renderFrame = (frame: GameFrame): string =>
     : frame.mode === 'gameOver'
     ? renderGameOverScreen(frame.screen.score)
     : renderScreen(frame.screen)
+
+/**
+ * `renderFrame`, but for the small-screen layout, which drops the
+ * sidebar for a separate overlay (see `Html.ts`'s `.mobile-board` /
+ * `.mobile-stats`) and shows the playfield alone, full width. The title
+ * and game-over messages are re-centered for that narrower `BOARD_WIDTH`,
+ * rather than clipped out of the middle of `renderFrame`'s wider one;
+ * the game screen itself is `renderFrame`'s, with the sidebar columns cut
+ * off (its playfield content is already exactly `BOARD_WIDTH` wide).
+ *
+ * @since 1.0.0
+ * @category Destructors
+ */
+export const renderMobileFrame = (frame: GameFrame): string =>
+  frame.mode === 'start'
+    ? centerLinesFor(BOARD_WIDTH)(START_SCREEN_LINES)
+    : frame.mode === 'gameOver'
+    ? centerLinesFor(BOARD_WIDTH)(gameOverLines(frame.screen.score))
+    : join('\n')(
+        renderScreen(frame.screen)
+          .split('\n')
+          .map((line) => line.slice(0, BOARD_WIDTH))
+      )

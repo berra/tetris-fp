@@ -81,6 +81,25 @@ gravity loop stops — and darkens it under a centered "PAUSED" overlay
 (`.pause-overlay` in [`Html.ts`](src/Html.ts)); every other key is
 ignored until `Esc` resumes it.
 
+On a narrow screen (below `MOBILE_BREAKPOINT_PX`, a `@media` query in
+[`Html.ts`](src/Html.ts)), the layout switches: the sidebar is dropped
+for a condensed one-row overlay (`#mobile-stats`, 11px, "SCORE X LEVEL Y
+HIGH Z") on top of the playfield, which now fills the full screen width
+(`#mobile-board`, via `renderMobileFrame`). Below it, large arrow buttons
+(`.controls`, an ↑ over ◀▼▶) cover the same keys as the arrow keys —
+each just dispatches its key as a real `keydown`, so there's no separate
+button-handling logic from the keyboard's.
+
+The title and game-over screens are prose, not bricks, so on this same
+narrow layout they swap the character grid for plain, normally-wrapped,
+CSS-centered text instead (`#mobile-message`, from `START_SCREEN_LINES`
+/ `gameOverLines` in [`Renderer.ts`](src/Renderer.ts) directly — not
+`renderMobileFrame`'s re-centered ASCII grid, which stays reserved for
+the playfield). `#mobile-board` and `#mobile-message` each carry an
+`.active` class the client toggles based on `frame.mode`, so exactly
+one shows at a time; `#mobile-stats` is hidden along with the board,
+since it has nothing to overlay during a message.
+
 Running `npm run build` followed by `npm start` serves `dist/` (including
 `tetris.html` and `game.js`) at `http://localhost:7878`.
 
