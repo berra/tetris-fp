@@ -3,6 +3,7 @@ import {
   BOARD_WIDTH,
   INITIAL_LEVEL,
   LINES_PER_LEVEL,
+  Position,
   emptyBoard,
   hardDrop,
   initialScreen,
@@ -17,6 +18,9 @@ import {
   tick,
   tickFrame,
 } from '../src'
+
+const cellSet = (cells: ReadonlyArray<Position>): ReadonlyArray<string> =>
+  cells.map(([x, y]) => `${x},${y}`).sort()
 
 describe('spawn', () => {
   it('sets the active piece when there is none', () => {
@@ -54,6 +58,7 @@ describe('step', () => {
   it('locks the piece into the board and clears active once it hits the floor', () => {
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, BOARD_HEIGHT - 2],
         [5, BOARD_HEIGHT - 2],
@@ -75,6 +80,7 @@ describe('step', () => {
     )
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, 3],
         [5, 3],
@@ -90,6 +96,7 @@ describe('step', () => {
   it('awards no score or lines when locking completes no full row', () => {
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, BOARD_HEIGHT - 2],
         [5, BOARD_HEIGHT - 2],
@@ -111,6 +118,7 @@ describe('step', () => {
     )
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, BOARD_HEIGHT - 2],
         [5, BOARD_HEIGHT - 2],
@@ -140,6 +148,7 @@ describe('step', () => {
     )
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, BOARD_HEIGHT - 2],
         [5, BOARD_HEIGHT - 2],
@@ -162,6 +171,7 @@ describe('step', () => {
     )
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, BOARD_HEIGHT - 2],
         [5, BOARD_HEIGHT - 2],
@@ -204,6 +214,7 @@ describe('hardDrop', () => {
     )
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, 0],
         [5, 0],
@@ -221,6 +232,7 @@ describe('hardDrop', () => {
   it('locks in place immediately when already resting on the floor', () => {
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, BOARD_HEIGHT - 2],
         [5, BOARD_HEIGHT - 2],
@@ -242,6 +254,7 @@ describe('hardDrop', () => {
     )
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, 0],
         [5, 0],
@@ -271,6 +284,7 @@ describe('moveLeft', () => {
   it('refuses to move past the left wall', () => {
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [0, 0],
         [1, 0],
@@ -288,6 +302,7 @@ describe('moveLeft', () => {
     )
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [3, 0],
         [4, 0],
@@ -312,6 +327,7 @@ describe('moveRight', () => {
   it('refuses to move past the right wall', () => {
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [BOARD_WIDTH - 2, 0],
         [BOARD_WIDTH - 1, 0],
@@ -337,18 +353,55 @@ describe('rotateClockwise / rotateCounterClockwise', () => {
     expect(rotated.active?.cells).not.toEqual(screen.active?.cells)
   })
 
-  it('refuses to rotate past the top of the board', () => {
+  it('wall-kicks a piece that the plain rotation would push off the board', () => {
+    // A vertical I flush against the left wall (column 0). Rotating it
+    // again would naively put two of its cells in negative columns —
+    // the Super Rotation System's wall kicks should shift it right
+    // instead of just refusing the rotation.
     const piece = {
       id: 'I' as const,
+      orientation: 1 as const,
       cells: [
-        [0, 0],
-        [1, 0],
-        [2, 0],
-        [3, 0],
+        [0, 5],
+        [0, 6],
+        [0, 7],
+        [0, 8],
       ] as const,
     }
     const screen = { ...initialScreen, active: piece }
-    // Rotating this horizontal I 90° would swing a cell above row 0.
+    const rotated = rotateClockwise(screen)
+    expect(rotated.active?.orientation).toBe(2)
+    expect(cellSet(rotated.active?.cells ?? [])).toEqual(
+      cellSet([
+        [0, 7],
+        [1, 7],
+        [2, 7],
+        [3, 7],
+      ])
+    )
+  })
+
+  it('leaves the piece unchanged when even every wall kick still collides', () => {
+    // A J resting in the bottom-left corner. Rotating it clockwise
+    // naively pokes a cell below the floor; both wall-kick offsets that
+    // would otherwise hop it up out of the way land on these two
+    // settled blocks instead, so every one of the 5 candidates fails.
+    const piece = {
+      id: 'J' as const,
+      orientation: 0 as const,
+      cells: [
+        [0, BOARD_HEIGHT - 2],
+        [0, BOARD_HEIGHT - 1],
+        [1, BOARD_HEIGHT - 1],
+        [2, BOARD_HEIGHT - 1],
+      ] as const,
+    }
+    const board = emptyBoard.map((row, y) =>
+      y === BOARD_HEIGHT - 4
+        ? row.map((c, x) => (x === 1 || x === 2 ? 'I' : c))
+        : row
+    )
+    const screen = { ...initialScreen, board, active: piece }
     expect(rotateClockwise(screen)).toEqual(screen)
   })
 })
@@ -371,6 +424,7 @@ describe('tick', () => {
   it('spawns the next piece the same tick a piece locks', () => {
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, BOARD_HEIGHT - 2],
         [5, BOARD_HEIGHT - 2],
@@ -409,6 +463,7 @@ describe('tick', () => {
     // starting state: an 'O' resting right on the floor, 'S' queued as next
     const piece = {
       id: 'O' as const,
+      orientation: 0 as const,
       cells: [
         [4, BOARD_HEIGHT - 2],
         [5, BOARD_HEIGHT - 2],

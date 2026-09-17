@@ -1,6 +1,6 @@
 # tetris-fp
 
-[![Test](http:&#x2F;&#x2F;&#x2F;actions&#x2F;workflows&#x2F;build.yml&#x2F;badge.svg)](http:&#x2F;&#x2F;&#x2F;actions&#x2F;workflows&#x2F;build.yml)
+[![Test](http:///actions/workflows/build.yml/badge.svg)](http:///actions/workflows/build.yml)
 
 [API Docs](http://)
 
@@ -68,18 +68,36 @@ of [`src/browser/main.ts`](src/browser/main.ts), built by
 `npm run build:browser` (esbuild; `npm run build` runs it automatically),
 that wires the library's pure game functions up to the keyboard:
 
-| Key                 | Action                  |
-| -------------------- | ------------------------ |
-| `←` / `→`            | Move left / right        |
-| `↑`                  | Rotate clockwise         |
-| `Z`                  | Rotate counter-clockwise |
-| `↓` / `Space`        | Hard drop                |
-| `Esc`                | Pause / resume            |
+| Key           | Action                   |
+| ------------- | ------------------------ |
+| `←` / `→`     | Move left / right        |
+| `↑`           | Rotate clockwise         |
+| `Z`           | Rotate counter-clockwise |
+| `↓` / `Space` | Hard drop                |
+| `Esc`         | Pause / resume           |
 
 Pausing (`togglePause`) freezes the game screen exactly as it was — the
 gravity loop stops — and darkens it under a centered "PAUSED" overlay
 (`.pause-overlay` in [`Html.ts`](src/Html.ts)); every other key is
 ignored until `Esc` resumes it.
+
+Rotation follows the [Super Rotation
+System](https://tetris.wiki/Super_Rotation_System): every piece tracks
+which of its four states (spawn, clockwise once, twice, or
+counter-clockwise once) it's currently in (`Piece.orientation`), and
+each state is a fixed shape in the piece's own bounding box
+(`TETROMINO_ROTATIONS` in [`Tetromino.ts`](src/Tetromino.ts) — 3x3 for
+J/L/S/T/Z, 4x4 for I, derived by turning the spawn shape around the
+box's center; O only ever has the one). Turning a piece tries a short
+list of candidate positions in order (`Piece.rotationCandidates`): the
+plain in-place rotation first, then that piece's wall kicks
+(`wallKickOffsets` — I gets its own wider table, the other five share
+one), nudging it a cell or two at a time until one doesn't collide with
+a wall or a settled block — which is what lets a piece rotate flush
+against a wall, or hop up out of a shallow well, instead of just
+refusing. `rotateClockwise`/`rotateCounterClockwise` in
+[`Gravity.ts`](src/Gravity.ts) keep the first candidate that fits, or
+leave the piece untouched if none do.
 
 On a narrow screen (below `MOBILE_BREAKPOINT_PX`, a `@media` query in
 [`Html.ts`](src/Html.ts)), the layout switches: the sidebar is dropped

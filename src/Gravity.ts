@@ -10,8 +10,9 @@ import { clearRows, findFullRows, scoreForLines } from './Lines'
 import { assoc } from './internal'
 import {
   Piece,
+  RotationDirection,
   isPieceCell,
-  rotate,
+  rotationCandidates,
   shiftDown,
   shiftLeft,
   shiftRight,
@@ -66,6 +67,22 @@ const tryTransform =
     return collides(screen.board)(moved.cells)
       ? screen
       : setActive(moved)(screen)
+  }
+
+// Tries `rotationCandidates` in order — the plain in-place rotation,
+// then each wall-kick offset — and keeps the first one that doesn't
+// collide, exactly as the Super Rotation System defines a rotation:
+// not a single transform to accept or reject, but a short list of
+// positions to try until one fits.
+const tryRotate =
+  (direction: RotationDirection) =>
+  (screen: GameScreen): GameScreen => {
+    if (screen.active === null) return screen
+
+    const fit = rotationCandidates(direction)(screen.active).find(
+      (candidate) => !collides(screen.board)(candidate.cells)
+    )
+    return fit === undefined ? screen : setActive(fit)(screen)
   }
 
 const dropToFloor =
@@ -134,27 +151,27 @@ export const moveRight: (screen: GameScreen) => GameScreen =
   tryTransform(shiftRight)
 
 /**
- * Rotate the active piece 90° clockwise, unless doing so would collide
- * with a wall or a settled block — in which case `screen` is returned
- * unchanged. Does nothing if there's no active piece.
+ * Rotate the active piece 90° clockwise, per the Super Rotation
+ * System: the plain in-place rotation if it fits, otherwise the first
+ * of its wall kicks that does (see `rotationCandidates`), or `screen`
+ * unchanged if none of them do. Does nothing if there's no active
+ * piece.
  *
  * @since 1.0.0
  * @category Destructors
  */
-export const rotateClockwise: (screen: GameScreen) => GameScreen = tryTransform(
-  rotate('cw')
-)
+export const rotateClockwise: (screen: GameScreen) => GameScreen =
+  tryRotate('cw')
 
 /**
- * Rotate the active piece 90° counter-clockwise, unless doing so would
- * collide with a wall or a settled block — in which case `screen` is
- * returned unchanged. Does nothing if there's no active piece.
+ * Rotate the active piece 90° counter-clockwise — `rotateClockwise`,
+ * the other way around.
  *
  * @since 1.0.0
  * @category Destructors
  */
 export const rotateCounterClockwise: (screen: GameScreen) => GameScreen =
-  tryTransform(rotate('ccw'))
+  tryRotate('ccw')
 
 /**
  * Spawn `id` as the active piece — but only if there isn't one already,

@@ -95,6 +95,7 @@ describe('renderScreen', () => {
       board: emptyBoard,
       active: {
         id: 'O',
+        orientation: 0,
         cells: [
           [0, 0],
           [1, 0],

@@ -99,7 +99,7 @@ const renderPreviewCell =
   (id: TetrominoId) =>
   (y: number) =>
   (x: number): Cell =>
-    isPieceCell({ id, cells: TETROMINO_SHAPES[id] })(x, y) ? id : null
+    isPieceCell({ cells: TETROMINO_SHAPES[id] })(x, y) ? id : null
 
 const renderPreviewRow =
   (id: TetrominoId) =>
