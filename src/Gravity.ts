@@ -1,7 +1,7 @@
 /** @since 1.0.0 */
 
 import { pipe } from 'fp-ts/function'
-import { Board, TetrominoId } from './Board'
+import { Board, Cell, Position, Row, TetrominoId } from './Board'
 import { collides } from './Collision'
 import { GameFrame } from './GameFrame'
 import { GameScreen } from './GameScreen'
@@ -11,7 +11,6 @@ import { assoc } from './internal'
 import {
   Piece,
   RotationDirection,
-  isPieceCell,
   rotationCandidates,
   shiftDown,
   shiftLeft,
@@ -30,12 +29,33 @@ const setLines = assoc<GameScreen>()('lines')
 const setLevel = assoc<GameScreen>()('level')
 const setNext = assoc<GameScreen>()('next')
 
+// Which columns, if any, of `cells` fall on row `y` — a piece only ever
+// has 4 cells, so this is cheap to re-check per row.
+const cellsInRow =
+  (cells: ReadonlyArray<Position>) =>
+  (y: number): ReadonlyArray<number> =>
+    cells.filter(([, cellY]) => cellY === y).map(([x]) => x)
+
+const withColumn =
+  (id: TetrominoId) =>
+  (columns: ReadonlyArray<number>) =>
+  (cell: Cell, x: number): Cell =>
+    columns.includes(x) ? id : cell
+
+const lockRow =
+  (piece: Piece) =>
+  (row: Row, y: number): Row => {
+    const columns = cellsInRow(piece.cells)(y)
+    return columns.length === 0 ? row : row.map(withColumn(piece.id)(columns))
+  }
+
+// A piece only ever occupies 4 cells, so locking it only needs to check
+// each row for which (if any) of those cells land there, rather than
+// scanning every one of the board's cells against the piece's shape.
 const lockPiece =
   (board: Board) =>
   (piece: Piece): Board =>
-    board.map((row, y) =>
-      row.map((cell, x) => (isPieceCell(piece)(x, y) ? piece.id : cell))
-    )
+    board.map(lockRow(piece))
 
 // Lock `piece` into `screen.board`, clear any lines it completed, award
 // the score for them (at the level they were cleared at), and level up
