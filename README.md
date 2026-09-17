@@ -72,8 +72,8 @@ that wires the library's pure game functions up to the keyboard:
 | ------------- | ------------------------ |
 | `←` / `→`     | Move left / right        |
 | `↑`           | Rotate clockwise         |
-| `Z`           | Rotate counter-clockwise |
-| `↓` / `Space` | Hard drop                |
+| `↓`           | Rotate counter-clockwise |
+| `Space`       | Hard drop                |
 | `Esc`         | Pause / resume           |
 
 Pausing (`togglePause`) freezes the game screen exactly as it was — the

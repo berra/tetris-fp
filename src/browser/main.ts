@@ -170,11 +170,9 @@ window.addEventListener('keydown', (event) => {
     case 'ArrowUp':
       frame = setScreen(rotateClockwise(frame.screen))(frame)
       break
-    case 'z':
-    case 'Z':
+    case 'ArrowDown':
       frame = setScreen(rotateCounterClockwise(frame.screen))(frame)
       break
-    case 'ArrowDown':
     case ' ':
       // Lock the dropped piece and spawn its replacement immediately,
       // rather than leaving the board piece-less until the next tick.
