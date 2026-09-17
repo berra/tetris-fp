@@ -11,7 +11,6 @@ import { assoc } from './internal'
 import {
   Piece,
   RotationDirection,
-  isPieceCell,
   rotationCandidates,
   shiftDown,
   shiftLeft,
@@ -30,12 +29,25 @@ const setLines = assoc<GameScreen>()('lines')
 const setLevel = assoc<GameScreen>()('level')
 const setNext = assoc<GameScreen>()('next')
 
+// A piece only ever occupies 4 cells, so locking it only needs to touch
+// the rows those cells land in — group them by row first, then rebuild
+// just those rows, rather than scanning every one of the board's cells
+// against the piece's shape.
 const lockPiece =
   (board: Board) =>
-  (piece: Piece): Board =>
-    board.map((row, y) =>
-      row.map((cell, x) => (isPieceCell(piece)(x, y) ? piece.id : cell))
-    )
+  (piece: Piece): Board => {
+    const columnsByRow = new Map<number, ReadonlyArray<number>>()
+    piece.cells.forEach(([x, y]) => {
+      columnsByRow.set(y, [...(columnsByRow.get(y) ?? []), x])
+    })
+
+    return board.map((row, y) => {
+      const columns = columnsByRow.get(y)
+      return columns === undefined
+        ? row
+        : row.map((cell, x) => (columns.includes(x) ? piece.id : cell))
+    })
+  }
 
 // Lock `piece` into `screen.board`, clear any lines it completed, award
 // the score for them (at the level they were cleared at), and level up
