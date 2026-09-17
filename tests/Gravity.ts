@@ -3,7 +3,6 @@ import {
   BOARD_WIDTH,
   INITIAL_LEVEL,
   LINES_PER_LEVEL,
-  Position,
   emptyBoard,
   hardDrop,
   initialScreen,
@@ -18,9 +17,7 @@ import {
   tick,
   tickFrame,
 } from '../src'
-
-const cellSet = (cells: ReadonlyArray<Position>): ReadonlyArray<string> =>
-  cells.map(([x, y]) => `${x},${y}`).sort()
+import { cellSet } from './testUtils'
 
 describe('spawn', () => {
   it('sets the active piece when there is none', () => {

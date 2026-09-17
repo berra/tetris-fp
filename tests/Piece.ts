@@ -1,6 +1,5 @@
 import * as fc from 'fast-check'
 import {
-  Position,
   TETROMINO_IDS,
   isPieceCell,
   rotationCandidates,
@@ -9,9 +8,7 @@ import {
   shiftRight,
   spawnPiece,
 } from '../src'
-
-const cellSet = (cells: ReadonlyArray<Position>): ReadonlyArray<string> =>
-  cells.map(([x, y]) => `${x},${y}`).sort()
+import { cellSet } from './testUtils'
 
 describe('shiftDown', () => {
   it('moves every cell down by one row, keeping the same id and columns', () => {

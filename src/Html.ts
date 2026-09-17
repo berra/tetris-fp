@@ -130,6 +130,10 @@ const pieceColorRule = (id: TetrominoId): string => {
 const pieceColorRules = (): string =>
   pipe(TETROMINO_IDS, RA.map(pieceColorRule), join('\n  '))
 
+// PIECE_COLORS/TETROMINO_IDS never change, so this only needs computing once
+// rather than on every `pageShell` call.
+const PIECE_COLOR_RULES = pieceColorRules()
+
 const renderLine = (line: string): string =>
   pipe(line.split(''), RA.map(renderCellDiv), join(''))
 
@@ -243,7 +247,7 @@ const pageShell =
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title}</title>
+<title>${escapeHtml(title)}</title>
 <style>
   html, body {
     margin: 0;
@@ -375,7 +379,7 @@ const pageShell =
   .control-btn:active {
     background: #45453a;
   }
-  ${pieceColorRules()}
+  ${PIECE_COLOR_RULES}
   @media (max-width: ${MOBILE_BREAKPOINT_PX}px) {
     html, body {
       height: auto;

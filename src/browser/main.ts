@@ -33,44 +33,35 @@ const setScreen = assoc<GameFrame>()('screen')
 const setNext = assoc<GameScreen>()('next')
 const setHighScore = assoc<GameScreen>()('highScore')
 
-const screen = document.getElementById('screen')
-const mobileBoard = document.getElementById('mobile-board')
-const mobileMessage = document.getElementById('mobile-message')
-const mobileStats = document.getElementById('mobile-stats')
-const pauseOverlay = document.getElementById('pause-overlay')
-const controls = document.getElementById('controls')
-
-if (screen === null) {
-  throw new Error('missing #screen element')
+const requireElement = (id: string): HTMLElement => {
+  const element = document.getElementById(id)
+  if (element === null) {
+    throw new Error(`missing #${id} element`)
+  }
+  return element
 }
 
-if (mobileBoard === null) {
-  throw new Error('missing #mobile-board element')
-}
-
-if (mobileMessage === null) {
-  throw new Error('missing #mobile-message element')
-}
-
-if (mobileStats === null) {
-  throw new Error('missing #mobile-stats element')
-}
-
-if (pauseOverlay === null) {
-  throw new Error('missing #pause-overlay element')
-}
-
-if (controls === null) {
-  throw new Error('missing #controls element')
-}
+const screen = requireElement('screen')
+const mobileBoard = requireElement('mobile-board')
+const mobileMessage = requireElement('mobile-message')
+const mobileStats = requireElement('mobile-stats')
+const pauseOverlay = requireElement('pause-overlay')
+const controls = requireElement('controls')
 
 let frame: GameFrame = initialFrame
 let gravityTimeoutId: number | undefined
+
+// The score last checked against localStorage — lets syncHighScore skip its
+// localStorage read on paints where the score can't have changed (e.g. a
+// plain move or rotation), rather than hitting storage on every keydown.
+let lastSyncedScore = -1
 
 // Keeps `screen.highScore` in sync with the persisted high score before
 // every paint, so it's always showing the true max — this run's score
 // included, the moment it beats the previous record.
 const syncHighScore = (): void => {
+  if (frame.screen.score === lastSyncedScore) return
+  lastSyncedScore = frame.screen.score
   const highScore = updateHighScore(frame.screen.score)
   frame = setScreen(setHighScore(highScore)(frame.screen))(frame)
 }

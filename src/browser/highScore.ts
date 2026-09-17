@@ -8,7 +8,7 @@ const readHighScore = (): number => {
   try {
     const stored = window.localStorage.getItem(HIGH_SCORE_KEY)
     const parsed = stored === null ? 0 : Number(stored)
-    return Number.isFinite(parsed) ? parsed : 0
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0
   } catch {
     // localStorage unavailable (private browsing, disabled storage, ...)
     // — just play without a persisted high score this session.
