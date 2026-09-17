@@ -214,7 +214,7 @@ describe('renderFrame', () => {
 
 describe('renderMobileFrame', () => {
   it('always renders exactly SCREEN_ROWS lines of BOARD_WIDTH characters', () => {
-    ;[
+    [
       initialFrame,
       playingFrame,
       { mode: 'paused' as const, screen: initialScreen },
