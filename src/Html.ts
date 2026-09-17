@@ -117,13 +117,14 @@ const renderColoredCellDiv =
     return `<div class="cell${pieceClass}">${escapeHtml(char)}</div>`
   }
 
-// Each piece's own color borders its block and tints its letter; a much
-// lighter mix of that same color fills the block, so a piece reads as a
-// row of bordered blocks rather than a row of colored letters.
+// Each piece's own color creates a 3D block with shading: an inset
+// shadow for depth and an outer shadow for lift. The letter is hidden
+// via font-size: 0 on piece cells, leaving just the colored block.
 const pieceColorRule = (id: TetrominoId): string => {
   const color = PIECE_COLORS[id]
   const fill = lighten(BLOCK_FILL_LIGHTEN)(color)
-  return `.piece-${id} { color: ${color}; background: ${fill}; border: ${BLOCK_BORDER_PX}px solid ${color}; }`
+  const shadow = `inset -2px -2px 4px rgba(0,0,0,0.3), inset 2px 2px 4px rgba(255,255,255,0.3), 2px 2px 3px rgba(0,0,0,0.4)`
+  return `.piece-${id} { background: ${fill}; border: ${BLOCK_BORDER_PX}px solid ${color}; box-shadow: ${shadow}; }`
 }
 
 const pieceColorRules = (): string =>
@@ -320,6 +321,11 @@ const pageShell =
     font-weight: bold;
     font-size: ${TILE_SIZE_PX * 0.75}px;
     color: ${SCREEN_TEXT};
+  }
+  .cell[class*="piece-"] {
+    font-size: 0 !important;
+    color: transparent !important;
+    text-indent: -9999px;
   }
   .pause-overlay {
     display: none;
