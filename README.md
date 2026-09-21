@@ -103,8 +103,9 @@ On a narrow screen (below `MOBILE_BREAKPOINT_PX`, a `@media` query in
 [`Html.ts`](src/Html.ts)), the layout switches: the sidebar is dropped
 for a condensed one-row overlay (`#mobile-stats`, 11px, "SCORE X LEVEL Y
 HIGH Z") on top of the playfield, which now fills the full screen width
-(`#mobile-board`, via `renderMobileFrame`). Below it, large arrow buttons
-(`.controls`, an ↑ over ◀▼▶) cover the same keys as the arrow keys —
+(`#mobile-board`, via `renderMobileFrame`). Below it, large buttons
+(`.controls`: an ↑ over ◀▼▶, plus PAUSE and DROP in the top corners) cover the
+same keys as the keyboard (arrows, `Esc`, `Space`) —
 each just dispatches its key as a real `keydown`, so there's no separate
 button-handling logic from the keyboard's.
 

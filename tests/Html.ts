@@ -154,6 +154,12 @@ describe('toHtmlDocument', () => {
 })
 
 describe('toGameHtmlDocument', () => {
+  it('includes small-screen pause and hard drop buttons', () => {
+    const html = toGameHtmlDocument()
+    expect(html).toContain('data-key="Escape"')
+    expect(html).toContain('data-key=" "')
+  })
+
   it('includes the small-screen control buttons, one per arrow key', () => {
     const html = toGameHtmlDocument()
     ;['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].forEach((key) => {
