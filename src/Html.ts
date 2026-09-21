@@ -350,7 +350,7 @@ const pageShell =
   .controls {
     display: none;
     grid-template-columns: repeat(3, 1fr);
-    grid-template-areas: ". up ." "left down right";
+    grid-template-areas: "pause up drop" "left down right";
     gap: 12px;
     width: 100%;
     max-width: 320px;
@@ -362,6 +362,13 @@ const pageShell =
   .control-left { grid-area: left; }
   .control-down { grid-area: down; }
   .control-right { grid-area: right; }
+  .control-pause { grid-area: pause; }
+  .control-drop { grid-area: drop; }
+  .control-label {
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
   .control-btn {
     aspect-ratio: 1;
     border: none;
@@ -423,17 +430,22 @@ ${bodyHtml}
 `
 
 // The small-screen control pad: a classic inverted-T arrow cluster below
-// the board. Each button just fires the same key its label matches —
-// `main.ts`'s one keydown handler (keyboard or synthetic) does the rest,
-// so there's no separate control-handling logic to keep in sync.
-const controlButton = (arrow: string, key: string, area: string): string =>
-  `<button type="button" class="control-btn control-${area}" data-key="${key}" aria-label="${key}">${arrow}</button>`
+// the board, with pause and hard drop in the spare top corners. Each
+// button just fires the same key its label matches — `main.ts`'s one
+// keydown handler (keyboard or synthetic) does the rest, so there's no
+// separate control-handling logic to keep in sync.
+const controlButton =
+  (label: string, key: string, area: string, name = key) =>
+  (className = ''): string =>
+    `<button type="button" class="control-btn control-${area}${className}" data-key="${key}" aria-label="${name}">${label}</button>`
 
 const controlsHtml = `<div class="controls" id="controls">
-  ${controlButton('▲', 'ArrowUp', 'up')}
-  ${controlButton('◀', 'ArrowLeft', 'left')}
-  ${controlButton('▼', 'ArrowDown', 'down')}
-  ${controlButton('▶', 'ArrowRight', 'right')}
+  ${controlButton('PAUSE', 'Escape', 'pause', 'Pause')(' control-label')}
+  ${controlButton('▲', 'ArrowUp', 'up')()}
+  ${controlButton('DROP', ' ', 'drop', 'Hard drop')(' control-label')}
+  ${controlButton('◀', 'ArrowLeft', 'left')()}
+  ${controlButton('▼', 'ArrowDown', 'down')()}
+  ${controlButton('▶', 'ArrowRight', 'right')()}
 </div>`
 
 const gameScript = '<script src="game.js"></script>'
